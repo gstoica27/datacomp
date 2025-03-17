@@ -3,6 +3,7 @@ import os
 import re
 import shutil
 from pathlib import Path
+import wandb
 
 import img2dataset
 from cloudpathlib import CloudPath
@@ -214,6 +215,8 @@ if __name__ == "__main__":
         print(f"Downloading images to {shard_dir}")
 
         bbox_col = None if args.skip_bbox_blurring else "face_bboxes"
+        # NOTE: I've hardcoded my api key path here.
+        wandb.login(key=open('/weka/prior-default/georges/keys/wandb.txt', 'r').readlines()[0].strip())
 
         img2dataset.download(
             url_list=str(metadata_dir),
