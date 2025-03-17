@@ -13,7 +13,7 @@ wandb.login(
 )
 shutil.copy(
     "/weka/prior-default/georges/redundancies/wandb/.netrc",
-    " ~/.netrc"
+    "/root/.netrc"
 )
 
 import img2dataset
