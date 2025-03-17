@@ -5,6 +5,12 @@ import shutil
 from pathlib import Path
 import wandb
 
+# NOTE: I've hardcoded my api key path here.
+wandb.login(
+    relogin=True,
+    key=open('/weka/prior-default/georges/keys/wandb.txt', 'r').readlines()[0].strip()
+)
+
 import img2dataset
 from cloudpathlib import CloudPath
 from huggingface_hub import snapshot_download
@@ -215,11 +221,6 @@ if __name__ == "__main__":
         print(f"Downloading images to {shard_dir}")
 
         bbox_col = None if args.skip_bbox_blurring else "face_bboxes"
-        # NOTE: I've hardcoded my api key path here.
-        wandb.login(
-            relogin=True,
-            key=open('/weka/prior-default/georges/keys/wandb.txt', 'r').readlines()[0].strip()
-        )
 
         img2dataset.download(
             url_list=str(metadata_dir),
