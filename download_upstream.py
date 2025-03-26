@@ -32,7 +32,7 @@ if __name__ == "__main__":
         "--scale",
         type=str,
         required=False,
-        choices=available_scales(simple_names=True)[1:] + ["datacomp_1b"],
+        choices=available_scales(simple_names=True)[1:] + ["datacomp_1b", "datacomp_12m"],
         default="small",
         help="Competition scale.",
     )
@@ -145,12 +145,18 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+    if args.scale == 'datacomp_1b':
+        hf_repo = "mlfoundations/datacomp_1b"
+    elif args.scale == "datacomp_12m":
+        hf_repo = "mlfoundations/DataComp-12M"
+    else:
+        hf_repo = f"mlfoundations/datacomp_{args.scale}"
 
-    hf_repo = (
-        f"mlfoundations/datacomp_{args.scale}"
-        if args.scale != "datacomp_1b"
-        else "mlfoundations/datacomp_1b"
-    )
+    #hf_repo = (
+    #    f"mlfoundations/datacomp_{args.scale}"
+    #    if args.scale != "datacomp_1b"
+    #    else "mlfoundations/datacomp_1b"
+    #)
 
     metadata_dir = args.metadata_dir
     if metadata_dir is None:
@@ -168,7 +174,7 @@ if __name__ == "__main__":
         cache_dir = metadata_dir.parent / f"hf"
         hf_snapshot_args = dict(
             repo_id=hf_repo,
-            allow_patterns=f"*.parquet",
+            allow_patterns=f"*.parquet|tar",
             local_dir=metadata_dir,
             cache_dir=cache_dir,
             local_dir_use_symlinks=False,
@@ -177,7 +183,7 @@ if __name__ == "__main__":
 
         if args.scale == "xlarge":
             hf_snapshot_args["allow_patterns"] = f"*/*.parquet"
-
+        import pdb; pdb.set_trace()
         snapshot_download(**hf_snapshot_args)
         if args.download_npz:
             hf_snapshot_args["allow_patterns"] = hf_snapshot_args[

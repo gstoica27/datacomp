@@ -1,4 +1,4 @@
-name: datacomp
+name: datacomp_debug
 channels:
   - defaults
 dependencies:
