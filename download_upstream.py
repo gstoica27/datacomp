@@ -3,6 +3,18 @@ import os
 import re
 import shutil
 from pathlib import Path
+import wandb
+import shutil
+
+# NOTE: I've hardcoded my api key path here.
+wandb.login(
+    relogin=True,
+    key=open('/weka/prior-default/georges/keys/wandb.txt', 'r').readlines()[0].strip()
+)
+shutil.copy(
+    "/weka/prior-default/georges/redundancies/wandb/.netrc",
+    "/root/.netrc"
+)
 
 import img2dataset
 from cloudpathlib import CloudPath
