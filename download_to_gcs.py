@@ -9,11 +9,12 @@ from fire import Fire
 from time import time, sleep
 import multiprocessing
 from tqdm import tqdm
-from typing import List, Optional, Literal
 
 os.environ["AWS_DEFAULT_REGION"] = "us-west-1"
 os.environ["AWS_ACCESS_KEY_ID"] = "AKIAZW3TMCLLUA6MAQLI"
 os.environ["AWS_SECRET_ACCESS_KEY"] = "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"
+
+from typing import List, Optional, Literal
 from moto3.queue_manager import QueueManager
 from google.cloud import storage, compute_v1
 from itertools import repeat
@@ -81,72 +82,7 @@ def shutdown_vm(project, zone, instance_name):
     operation.result()
     
 
-def download_transcript(
-    id_lang: List[str], output_dir: str, sub_format: Literal["srt", "vtt"]
-) -> Optional[None]:
-    """Download transcript of a video from YouTube
-
-    Download transcript of a video from YouTube using video ID and language code represented by video_id and lang_code respectively.
-    If output_dir is provided, the transcript file will be saved in the specified directory.
-    If sub_format is provided, the transcript file will be saved in the specified format.
-
-    Args:
-        video_id: YouTube video ID
-        lang_code: Language code of the transcript
-        output_dir: Directory to download the transcript file
-        sub_format: Format of the subtitle file
-    """
-    # to not redownload
-    yt_id = id_lang[0]
-    lang_code = id_lang[1]
-
-    if os.path.exists(f"{output_dir}/{yt_id}/{yt_id}.{lang_code}.{sub_format}"):
-        return None
-
-    if lang_code == "unknown":
-        lang_code = "en"
-
-    url = f"https://www.youtube.com/watch?v={yt_id}"
-
-    command = [
-        "yt-dlp",
-        "--write-subs",
-        "--no-write-auto-subs",
-        "--skip-download",
-        "--sub-format",
-        f"{sub_format}",
-        "--sub-langs",
-        f"{lang_code},-live_chat",
-        url,
-        "-o",
-        f"{output_dir}/%(id)s/%(id)s.%(ext)s",
-    ]
-
-    if sub_format == "srt":
-        command.extend(["--convert-subs", "srt"])
-
-    try:
-        result = subprocess.run(command, capture_output=True, text=True)
-
-        if any(identifier in result.stderr.lower() for identifier in IDENTIFIERS):
-            with open(f"metadata/unavailable/{output_dir}.txt", "a") as f:
-                f.write(f"{yt_id}\n")
-            return "unavailable"
-        else:
-            if not os.path.exists(
-                f"{output_dir}/{yt_id}/{yt_id}.{lang_code}.{sub_format}"
-            ):
-                with open(f"metadata/unknown/{output_dir}.txt", "a") as f:
-                    f.write(f"{yt_id}\ttranscript\t{result.stderr}\n")
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error in downloading video {yt_id}: {e.stderr}")
-        return -1
-
-
-def download(data_dir, metadata_path) -> Optional[None]:
-    hash_name = data_dir.split('/')[-1]
-    script = "download_upstream.py"
-            
+def download(data_dir, metadata_path) -> Optional[None]:        
     """
     -- python download_upstream.py \
     --scale datacomp_1b \
@@ -159,9 +95,12 @@ def download(data_dir, metadata_path) -> Optional[None]:
     --skip_bbox_blurring
     """
     
+    hash_name = data_dir.split('/')[-1]
+    script = "download_upstream.py"
+    
     args = [
         "--scale",
-        "datacomp_1b",
+        "xlarge",
         "--data_dir",
         data_dir,
         "--metadata_dir",
@@ -171,6 +110,8 @@ def download(data_dir, metadata_path) -> Optional[None]:
         "--resize_mode",
         "no",
         "--skip_bbox_blurring",
+        "--download_npz",
+        "--skip_shards"
     ]
             
     try:
@@ -201,10 +142,6 @@ def download(data_dir, metadata_path) -> Optional[None]:
     except subprocess.CalledProcessError as e:
         logger.error(f"Error in downloading video {hash_name}: {e.stderr}")
         return -1
-
-
-def parallel_download_transcript(arguments):
-    return download_transcript(*arguments)
 
 
 def parallel_download(arguments):
@@ -248,21 +185,9 @@ def upload_dir_to_gcs(bucket_name, source_dir):
 
 def download_to_gcs(data_dir, metadata_path) -> None:
     logger.info(f"Processing into: {data_dir} from: {metadata_path}..")
-    # logger.info(f"Received message: {ids_langs[:5]}")
 
     start = time()
-    # if transcript_only:
-    #     with multiprocessing.Pool() as pool:
-    #         res = list(
-    #             tqdm(
-    #                 pool.imap_unordered(
-    #                     parallel_download_transcript,
-    #                     zip(ids_langs, repeat(output_dir), repeat(sub_format)),
-    #                 ),
-    #                 total=len(ids_langs),
-    #             )
-    #         )
-    # else:
+    
     with multiprocessing.Pool() as pool:
         res = list(
             tqdm(
